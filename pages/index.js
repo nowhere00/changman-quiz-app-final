@@ -1,30 +1,49 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import quizData from '../quizData_창만30문제.json';
 
-export default function Home() {
-  const [selected, setSelected] = useState(Array(quizData.length).fill(null));
+// 옵션 셔플 함수
+function shuffleOptions(options) {
+  return [...options].sort(() => Math.random() - 0.5);
+}
 
-  const handleSelect = (qIdx, opt) => {
+export default function Home() {
+  const [shuffledData, setShuffledData] = useState([]);
+  const [selected, setSelected] = useState([]);
+
+  useEffect(() => {
+    const randomized = quizData.map(q => {
+      const shuffled = shuffleOptions(q.options);
+      return {
+        ...q,
+        shuffledOptions: shuffled,
+        correctIndex: shuffled.indexOf(q.answer)
+      };
+    });
+    setShuffledData(randomized);
+    setSelected(Array(randomized.length).fill(null));
+  }, []);
+
+  const handleSelect = (qIdx, optIdx) => {
     const newSelected = [...selected];
-    newSelected[qIdx] = opt;
+    newSelected[qIdx] = optIdx;
     setSelected(newSelected);
   };
 
   return (
     <main style={{ fontFamily: 'sans-serif', padding: '2rem', maxWidth: '720px', margin: 'auto' }}>
       <h1>창만 퀴즈 앱</h1>
-      {quizData.map((q, idx) => {
-        const userAnswer = selected[idx];
+      {shuffledData.map((q, idx) => {
+        const userAnswerIdx = selected[idx];
         return (
           <div key={idx} style={{ marginBottom: '2rem', padding: '1rem', border: '1px solid #ccc' }}>
             <h2>Q{idx + 1}. {q.question}</h2>
             <ul style={{ listStyle: 'none', paddingLeft: 0 }}>
-              {q.options.map((opt, i) => {
-                const isCorrect = userAnswer && opt === q.answer;
-                const isWrong = userAnswer === opt && opt !== q.answer;
+              {q.shuffledOptions.map((opt, i) => {
+                const isCorrect = userAnswerIdx === i && i === q.correctIndex;
+                const isWrong = userAnswerIdx === i && i !== q.correctIndex;
                 return (
                   <li key={i}
-                      onClick={() => handleSelect(idx, opt)}
+                      onClick={() => handleSelect(idx, i)}
                       style={{
                         cursor: 'pointer',
                         padding: '0.5rem',
@@ -38,9 +57,9 @@ export default function Home() {
                 );
               })}
             </ul>
-            {userAnswer && (
+            {userAnswerIdx !== null && (
               <div style={{ marginTop: '0.5rem', fontSize: '0.9rem', color: '#666' }}>
-                ✅ <strong>정답:</strong> {q.answer} <br />
+                ✅ <strong>정답:</strong> {q.shuffledOptions[q.correctIndex]} <br />
                 💡 {q.explanation}
               </div>
             )}
